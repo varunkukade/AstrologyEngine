@@ -121,6 +121,19 @@ def jagradadi(dignity):
     return "Sushupti (sleeping)"
 
 
+DEEPTADI = {"exalted": "Deepta", "moolatrikona": "Swastha", "own": "Swastha",
+            "great_friend": "Mudita", "friend": "Shanta", "neutral": "Deena",
+            "enemy": "Duhkhita", "great_enemy": "Khala", "debilitated": "Khala"}
+
+
+def deeptadi(dignity, combust):
+    """Deeptadi avastha from sign dignity (Phaladeepika ch.3 as commonly tabulated);
+    a combust planet is Vikala whatever its sign. Lists of these states differ
+    between Phaladeepika and Saravali; the dignity used is reported alongside."""
+    return {"state": "Vikala" if combust else DEEPTADI[dignity], "by_sign_dignity": DEEPTADI[dignity],
+            "vikala_combust": bool(combust)}
+
+
 # ---------------------------------------------------------------- conditions
 def combustion(chart):
     sun = chart.pos["Sun"]
@@ -186,6 +199,7 @@ def planet_details(chart, compound):
             "combustion": comb.get(p),
             "baladi_avastha": baladi(lon),
             "jagradadi_avastha": jagradadi(dg),
+            "deeptadi_avastha": deeptadi(dg, (comb.get(p) or {}).get("combust", False)),
             "gandanta": gandanta(lon),
             "degrees_from_sign_boundary": sandhi(lon),
             "whole_sign_house": chart.house(p),

@@ -379,3 +379,60 @@ def test_conditional_applicability_examples():
         for k, v in a.items():
             seen[k] = seen.get(k, 0) + bool(v["applicable"])
     assert seen["shodashottari"] > 0 and seen["dwadashottari"] > 0
+
+
+# ------------------------------------------------------------- remaining classical items
+def test_full_output_has_remaining_items():
+    r = compute({"date": "1990-01-01", "time": "12:00", **DELHI},
+                as_of=datetime(2026, 11, 4, tzinfo=timezone.utc), transit_years=1)
+    for k in ("Kala", "Mrityu", "Ardhaprahara", "Yamaghantaka", "Gulika", "Mandi"):
+        assert k in r["upagrahas"]
+    sl = r["special_lagnas"]
+    assert "pranapada" in sl and set(sl["varnada_lagna"]) >= {"bv_raman", "sanjay_rath"}
+    assert abs(sl["varnada_lagna"]["bv_raman"]["degree_in_sign"] - r["lagna"]["degree_in_sign"]) < 1e-6
+    for p, v in r["planets"].items():
+        d = v["deeptadi_avastha"]
+        assert d["state"] == ("Vikala" if v["combustion"] and v["combustion"]["combust"] else d["by_sign_dignity"])
+    bb = r["bhava_bala"]["bhavas"]
+    assert len(bb) == 12 and all(0 <= b["dig_bala"] <= 60 for b in bb.values())
+    v = r["varshaphala"]["running"]
+    yl = v["year_lord"]
+    assert yl["year_lord"] in yl["office_holders"].values()
+    assert len(v["sahams"]["sahams"]) == 28 and len(r["sahams_natal"]["sahams"]) == 28
+    sr, nxt = (datetime.fromisoformat(v[k]) for k in ("solar_return_time", "next_solar_return_time"))
+    pat = v["patyayini_dasha"]
+    assert pat[0]["start"] == v["solar_return_time"] and pat[-1]["end"] == v["next_solar_return_time"]
+    assert {p["lord"] for p in pat} == set(GRAHAS) | {"Lagna"}
+    mud = v["mudda_dasha"]
+    assert datetime.fromisoformat(mud[0]["start"]) <= sr < datetime.fromisoformat(mud[0]["end"])
+    span = sum(m["days"] for m in mud[:9])
+    assert abs(span - (nxt - sr).total_seconds() / 86400) < 1e-3
+
+
+def test_saham_rules_and_hadda():
+    from astroengine.tajika import sahams, hadda_lord, _between
+    c = chart("1990-01-01", "12:00")
+    day = sahams(c, True)["sahams"]
+    night = sahams(c, False)["sahams"]
+    m, s, a = c.pos["Moon"], c.pos["Sun"], c.asc
+    exp = (m - s + a) % 360
+    if not _between(a, s, m):
+        exp = (exp + 30) % 360
+    assert abs(day["Punya"]["longitude"] - exp) < 1e-9
+    exp_n = (s - m + a) % 360
+    if not _between(a, m, s):
+        exp_n = (exp_n + 30) % 360
+    assert abs(night["Punya"]["longitude"] - exp_n) < 1e-9
+    assert day["Roga"]["longitude"] == night["Roga"]["longitude"]      # not reversed at night
+    assert hadda_lord(5.9) == "Jupiter" and hadda_lord(6.0) == "Venus" and hadda_lord(35) == "Venus"
+    assert hadda_lord(70) == "Jupiter" and hadda_lord(29.99 + 300) == "Saturn"
+
+
+def test_pranapada_formula():
+    from astroengine.special import special_lagnas
+    c = chart("1990-01-01", "12:00")
+    day = SolarDay(c)
+    pp = special_lagnas(c, day)["pranapada"]["longitude"]
+    vigh = (c.jd - day.sunrise) * 86400 / 24
+    exp = (c.pos["Sun"] + 2 * vigh + [0, 240, 120][c.sign("Sun") % 3]) % 360
+    assert abs(pp - exp) < 1e-9

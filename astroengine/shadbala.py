@@ -230,3 +230,48 @@ def shadbala(chart, compound, day, hora_lord):
     return {"planets": out, "ranking_by_ratio": ranking,
             "lords": {"vara": vara_lord, "hora": hora_lord, "abda": abda_lord, "masa": masa_lord},
             "conventions": CONVENTIONS}
+
+
+# ---------------------------------------------------------------- Bhava bala
+NARA = [(60, 90), (150, 180), (180, 210), (300, 330), (240, 255)]
+JALACHARA = [(90, 120), (285, 300), (330, 360)]
+CHATUSHPADA = [(0, 30), (30, 60), (120, 150), (255, 270), (270, 285)]
+KEETA = [(210, 240)]
+DIG_STRONG_HOUSE = (("nara", NARA, 1), ("jalachara", JALACHARA, 4), ("keeta", KEETA, 7),
+                    ("chatushpada", CHATUSHPADA, 10))
+
+
+def bhava_bala(chart, shad):
+    """Bhava bala (B.V. Raman, 'Graha and Bhava Balas'), in virupas:
+    bhavadhipati bala (total shadbala of the lord of the bhava madhya's sign)
+    + bhava dig bala (60 at the house where the madhya's sign class is strongest:
+      human 1st, watery 4th, Scorpio 7th, quadruped 10th; minus 10 per house away)
+    + bhava drishti bala (virupa aspects on the bhava madhya: Jupiter and Mercury
+      in full, other benefics +1/4, malefics -1/4)."""
+    ben = benefic_set(chart)
+    out = {}
+    for h in range(1, 13):
+        m = chart.bhava_madhya[h - 1]
+        lord = SIGN_LORD[sign_of(m)]
+        adhi = shad["planets"][lord]["total_virupas"]
+        cls, strong = next((n, sh) for n, arcs, sh in DIG_STRONG_HOUSE
+                           if any(a <= m < b for a, b in arcs))
+        d = abs(h - strong) % 12
+        d = min(d, 12 - d)
+        dig = 60.0 - 10.0 * d
+        dr = 0.0
+        for q in GRAHAS:
+            v = virupa(q, chart.pos[q], m)
+            if q in ("Jupiter", "Mercury"):
+                dr += v
+            elif q in ben:
+                dr += v / 4.0
+            else:
+                dr -= v / 4.0
+        tot = adhi + dig + dr
+        out[h] = {"bhava_madhya": m, "lord": lord, "bhavadhipati_bala": adhi,
+                  "sign_class": cls, "dig_bala": dig, "drishti_bala": dr,
+                  "total_virupas": tot, "total_rupas": tot / 60.0}
+    rank = sorted(out, key=lambda h: -out[h]["total_virupas"])
+    return {"bhavas": out, "ranking": rank,
+            "note": "Raman's method; not cross-checked against Jagannatha Hora"}

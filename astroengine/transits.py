@@ -78,9 +78,11 @@ def ingresses_and_stations(p, jd0, jd1, ay, node, want_stations=True):
 def slow_planet_timeline(natal, years=100):
     tz = natal.birth.local.tzinfo
     ay, node = natal.ayanamsa_name, natal.config.node
-    jd0, jd1 = natal.jd, natal.jd + years * 365.25
+    jd0 = natal.jd
+    jd1 = min(natal.jd + years * 365.25, E.RANGE_END_JD)
     moon = natal.sign("Moon")
-    out = {}
+    out = {"_window_end": iso(jd1, tz),
+           "_truncated_at_ephemeris_end": jd1 < natal.jd + years * 365.25}
     for p in ("Jupiter", "Saturn", "Rahu"):
         ing, sta = ingresses_and_stations(p, jd0, jd1, ay, node)
         for e in ing:
@@ -108,7 +110,7 @@ def saturn_phases(natal, saturn_ingresses, years=100):
     for e in saturn_ingresses:
         spans.append((cur_start, e["jd"], cur_sign))
         cur_sign, cur_start = SIGNS.index(e["to"]), e["jd"]
-    spans.append((cur_start, natal.jd + years * 365.25, cur_sign))
+    spans.append((cur_start, min(natal.jd + years * 365.25, E.RANGE_END_JD), cur_sign))
     out = []
     for a, z, s in spans:
         h = house_from(s, moon)

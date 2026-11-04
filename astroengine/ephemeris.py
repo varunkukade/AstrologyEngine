@@ -11,6 +11,9 @@ import swisseph as swe
 EPHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ephe")
 _initialised = False
 ALLOW_MOSHIER = False      # set by compute() from Config.allow_moshier
+# Coverage of the bundled files (sepl_18/semo_18), with a small safety margin.
+RANGE_START_JD = swe.julday(1800, 1, 3, 0.0)
+RANGE_END_JD = swe.julday(2399, 12, 29, 0.0)
 
 AYANAMSA = {
     "lahiri": swe.SIDM_LAHIRI,

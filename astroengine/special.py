@@ -28,7 +28,40 @@ def special_lagnas(chart, day):
     indu = (moon_s + r - 1) % 12
     out["indu_lagna"] = {"sign_index": indu, "sign": position_summary(indu * 30.0)["sign"],
                          "ninth_lord_from_lagna": l9, "ninth_lord_from_moon": m9}
+
+    if day.sunrise is not None:
+        # Pranapada (BPHS 3.71-74): vighatis since sunrise / 15 = signs (2 deg per
+        # vighati), added to the Sun if it is in a movable sign, to the 9th from it
+        # if fixed, to the 5th from it if dual.
+        vighatis = (chart.jd - day.sunrise) * 86400.0 / 24.0
+        offset = [0.0, 240.0, 120.0][chart.sign("Sun") % 3]
+        out["pranapada"] = position_summary((chart.pos["Sun"] + 2.0 * vighatis + offset) % 360)
+        out["pranapada"]["basis"] = "Sun's longitude at birth (BPHS); vighatis from the preceding sunrise"
+        out["varnada_lagna"] = varnada(chart, out["hora_lagna"]["longitude"])
     return out
+
+
+def varnada(chart, hora_lagna_lon):
+    """Varnada lagna from lagna and hora lagna. Two published methods differ, both given.
+    B.V. Raman (sign counts): count Aries->sign for odd signs or Pisces->sign (backward)
+    for even, for both lagnas; add the counts if their parity matches, else take the
+    difference; count that from Aries (odd lagna) or backward from Pisces (even lagna).
+    Sanjay Rath (longitudes): the same with full longitudes, reflected for even signs."""
+    L, H = chart.lagna, int(hora_lagna_lon // 30) % 12
+    cnt = lambda s: s + 1 if s % 2 == 0 else 12 - s
+    c1, c2 = cnt(L), cnt(H)
+    c = (c1 + c2) % 12 if (L % 2) == (H % 2) else abs(c1 - c2) % 12
+    c = c or 12
+    sign = (c - 1) % 12 if L % 2 == 0 else (12 - c) % 12
+    raman = position_summary(sign * 30.0 + chart.asc % 30)
+    a = chart.asc if L % 2 == 0 else 360.0 - chart.asc
+    h = hora_lagna_lon if H % 2 == 0 else 360.0 - hora_lagna_lon
+    v = (a + h) % 360 if (L % 2) == (H % 2) else abs(a - h) % 360
+    if L % 2 == 1:
+        v = 360.0 - v
+    rath = position_summary(v % 360)
+    return {"bv_raman": raman, "sanjay_rath": rath,
+            "note": "authors disagree on Varnada; both published methods are given"}
 
 
 def upagrahas(chart, day):
@@ -54,4 +87,10 @@ def upagrahas(chart, day):
         out["Mandi"] = position_summary(E.ascendant((a + z) / 2, b.lat, b.lon, chart.ayanamsa_name))
         out["_gulika_mandi_basis"] = ("lagna rising at the start (Gulika) and middle (Mandi) "
                                       "of Saturn's eighth of the birth day/night")
+        for name, lord in (("Kala", "Sun"), ("Mrityu", "Mars"), ("Ardhaprahara", "Mercury"),
+                           ("Yamaghantaka", "Jupiter")):
+            a, z = parts[lords.index(lord)]
+            out[name] = position_summary(E.ascendant((a + z) / 2, b.lat, b.lon, chart.ayanamsa_name))
+        out["_kala_group_basis"] = ("lagna rising at the middle of the eighth ruled by Sun (Kala), "
+                                    "Mars (Mrityu), Mercury (Ardhaprahara), Jupiter (Yamaghantaka)")
     return out

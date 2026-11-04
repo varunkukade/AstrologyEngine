@@ -57,23 +57,24 @@ Old keys (`y, mo, d, hh, mm, tz_offset`) are still accepted. Times that don't ex
 | section | contents |
 |---|---|
 | `birth`, `ayanamsa`, `meta` | UTC, Julian day, ΔT, LMT, ayanamsa value, ephemeris files, **every convention used** |
-| `lagna`, `midheaven`, `planets` | sidereal longitude, sign, nakshatra/pada with deity/gana/yoni/nadi, latitude, declination, RA, speed, retrograde, dignity (degree-aware), Uchcha bala, combustion with orb, Baladi/Jagradadi avasthas, gandanta, distance from sign edge, whole-sign and Sripati houses, houses ruled |
+| `lagna`, `midheaven`, `planets` | sidereal longitude, sign, nakshatra/pada with deity/gana/yoni/nadi, latitude, declination, RA, speed, retrograde, dignity (degree-aware), Uchcha bala, combustion with orb, Baladi/Jagradadi/Deeptadi avasthas, gandanta, distance from sign edge, whole-sign and Sripati houses, houses ruled |
 | `planetary_war` | pairs within 1° with latitude, declination and magnitude (texts disagree on which decides the winner) |
 | `houses` | whole-sign houses with occupants; Sripati bhava madhya/sandhi |
 | `relationships` | natural, temporary and compound (five-fold) friendship |
 | `vargas`, `vargottama`, `vimshopaka_bala` | all 16 Shodashavarga charts with the degree inside each varga, D60 deities; Vimshopaka on the 6/7/10/16-varga schemes |
 | `panchanga` | sunrise-based vara, tithi, nakshatra, yoga and karana with start/end times, amanta/purnimanta month and adhika flag, hora lord, Rahu kalam / Gulika kalam / Yamaganda, ishta kala |
-| `special_lagnas`, `upagrahas` | Bhava, Hora, Ghati, Sree and Indu lagnas; Gulika, Mandi, Dhuma, Vyatipata, Parivesha, Indrachapa, Upaketu |
+| `special_lagnas`, `upagrahas` | Bhava, Hora, Ghati, Sree, Indu lagnas, Pranapada, Varnada (B.V. Raman and Sanjay Rath methods); Gulika, Mandi, Kala, Mrityu, Ardhaprahara, Yamaghantaka, Dhuma, Vyatipata, Parivesha, Indrachapa, Upaketu |
 | `aspects` | graha drishti (sign), drishti strength in virupas, Jaimini rashi drishti, argala/virodhargala |
 | `ashtakavarga` | BAV, SAV (by sign and by house), prastara, trikona and ekadhipatya shodhana, shodhya pinda, kakshya order |
-| `shadbala` | all six balas with sub-components, rupas, required minimum, ratio, Ishta/Kashta phala |
+| `shadbala`, `bhava_bala` | all six balas with sub-components, rupas, required minimum, ratio, Ishta/Kashta phala; Bhava bala (bhavadhipati + dig + drishti) for all 12 bhavas |
+| `sahams_natal` | 28 Tajika sahams for the birth chart |
 | `yogas` | Raja (incl. Yogakaraka), Dhana, Pancha Mahapurusha, Vipreeta, lunar (Gaja Kesari, Sunapha/Anapha/Durudhara, Kemadruma with cancellation factors, Adhi, Shakata, Amala, Chandra-Mangala), solar (Vesi/Vasi/Ubhayachari, Budhaditya), Parivartana (Maha/Khala/Dainya), Nabhasa Sankhya and Ashraya, Kartari, node yogas; Neecha bhanga as a checklist of 10+ rules; Mangal dosha from lagna/Moon/Venus. Each result names its source rule |
 | `dashas` | Vimshottari (MD/AD/PD for the whole life, 5 levels at `as_of`), Yogini with ADs, Ashtottari with ADs and its applicability tests, Chara (K.N. Rao: both cycles, ±1 year for exalted/debilitated lords, ADs), Narayana (seed sign with the strength rule that decided it, Saturn/Ketu exceptions, both cycles, ADs), Kalachakra (Moon's pada cycle, savya/apasavya group, paramayush, balance, continuation through later padas, ADs, sign jump between consecutive dashas), and the Jaimini ayur dashas Sthira (7/8/9 years from Brahma's sign), Shoola (9 years each from the stronger of lagna/7th) and Brahma (years from each sign's 6th lord), each with a caution that they are not lifespan estimates |
 | `conditional_dashas` | the eight BPHS conditional nakshatra dashas, all computed with their applicability test (`applicable` true/false and the rule): Shodashottari (116), Dwadashottari (112), Panchottari (105), Shatabdika (100), Chaturashiti-sama (84), Dwisaptati-sama (72), Shashtihayani (60), Shattrimsha-sama (36); birth lord, balance, MDs over 120 years with ADs |
 | `jaimini` | chara karakas (8- and 7-karaka schemes, near-tie flags), stronger co-lord of Scorpio/Aquarius with the reason, all 12 arudha padas incl. AL and UL, Karakamsha, Swamsha, Brahma (candidates, scores, deciding rule) |
 | `kp` | KP ayanamsa + Placidus cusps; sign/star/sub/sub-sub lords for cusps and planets; four-level house significators with node agency; each planet's significations; cusp sub-lord significations; ruling planets at birth |
 | `transits` | snapshot at `as_of` (house from lagna/Moon, SAV/BAV bindus, kakshya and whether its lord gives a bindu, gochara-favourable flag, vedha, Tara bala, Chandra bala, natal points within 5°); lifetime Jupiter/Saturn/Rahu ingresses and Jupiter/Saturn stations, timed to the second; Sade Sati, Kantaka and Ashtama Shani periods |
-| `varshaphala` | running and next sidereal solar return: varsha lagna, planets, Muntha, four office-holders, Tajika aspects marked applying (ithasala) or separating (ishrafa) |
+| `varshaphala` | running and next sidereal solar return: varsha lagna, planets, Muntha, the five office-holders (incl. tri-rashi pati) with pancha-vargiya bala, Egyptian-term hadda and aspect on the varsha lagna, the year lord and the rule that chose it, Tajika aspects (ithasala/ishrafa), 28 sahams, Mudda (varsha Vimshottari) and Patyayini dashas with antardashas |
 | `birth_time_sensitivity` | minutes earlier/later at which the lagna sign, lagna pada, D9/D10/D12/D60 lagna, Moon sign/pada and each KP cusp sub-lord change; days of dasha shift per minute of birth-time error |
 
 **Read the sensitivity block before trusting fine-grained output.** The D60 lagna
@@ -95,7 +96,7 @@ two. An unrectified birth time can't support conclusions drawn from those factor
 | `include_outer_planets` | false | true (Uranus/Neptune/Pluto, reported separately) |
 
 Other fixed choices, stated in the output where they apply:
-- Gulika is the lagna at the start of Saturn's portion; Mandi is the lagna at its middle.
+- Gulika is the lagna at the start of Saturn's portion; Mandi is the lagna at its middle. Kala, Mrityu, Ardhaprahara and Yamaghantaka use the middle of the Sun's, Mars's, Mercury's and Jupiter's portions.
 - Horas are unequal (day ÷ 12, night ÷ 12).
 - Shadbala's conventions are listed in `shadbala.conventions`.
 - Ekadhipatya shodhana follows B.V. Raman's rules.
@@ -104,7 +105,7 @@ Other fixed choices, stated in the output where they apply:
 
 ## Validation
 
-`tests/` holds 68 tests:
+`tests/` holds 71 tests:
 - **Published values:**
   - Saturn's sidereal Pisces ingress: 29 Mar 2025 21:45 IST, published 21:44.
   - Jupiter's 2025 atichara: Cancer on 18 Oct, back to Gemini on 5 Dec.
@@ -174,16 +175,35 @@ labels which one was used.
   requiring a Cancer lagna, so that test is reported separately.
 - **Every dasha is computed for every chart.** BPHS prescribes one only when its condition holds, so check `applicable` first.
 
+### The last additions: confidence and open points
+
+- **Bhava bala** (B.V. Raman):
+  - bhavadhipati bala (shadbala of the bhava madhya's sign lord);
+  - plus dig bala (sign class strongest in the 1st/4th/7th/10th, falling 10 virupas per house away);
+  - plus drishti bala (Jupiter and Mercury in full, other benefics +¼, malefics −¼).
+  - Not cross-checked against Jagannatha Hora. PyJHora's own Bhava bala is marked unfinished by its author.
+- **Deeptadi:** dignity-based (Deepta exalted, Swastha own/MT, Mudita great friend, Shanta friend,
+  Deena neutral, Duhkhita enemy, Khala great enemy/debilitated), with Vikala for combust planets.
+  Phaladeepika and Saravali list these states differently.
+- **Pranapada (BPHS):** 2° per vighati since sunrise, added to the Sun, to the 9th from it or to the 5th from it,
+  depending on whether the Sun is in a movable, fixed or dual sign.
+- **Varnada:** two published methods disagree, and both are given.
+- **Tajika:**
+  - **Hadda:** the Egyptian terms, checked by each planet's term total (79/82/76/66/57). PyJHora's table has three typos.
+  - **Tri-rashi lords:** Tajika Neelakanthi's day/night table.
+  - **Pancha-vargiya bala:** P.V.R. Narasimha Rao's values. The neutral value for hadda, drekkana and navamsa
+    isn't stated in the source, so the friend/enemy midpoint is used.
+  - **Year lord:** the strongest office-holder aspecting the varsha lagna. Every candidate's strength
+    and aspect is reported so another rule can be applied.
+  - **Sahams:** 28 with clear formulas. Samartha and a few others whose formula varies are left out.
+  - **Mudda and Patyayini:** both fill the actual solar-return year exactly.
+- **Ephemeris edge:** dates past 2399 CE are marked `unavailable` instead of failing the whole chart.
+
 ## Not included, on purpose
 
-Each of these has competing definitions or needs tables that couldn't be verified
-here. Shipping a plausible-looking wrong number would be worse for a downstream
-reader than leaving it out.
-- Bhava bala
-- Deeptadi avasthas, Pranapada, Varnada lagna
-- Kala, Mrityu, Ardhaprahara and Yamaghantaka
-- The Tajika year lord, tri-rashi pati, Sahams and the Mudda/Patyayini dashas
-- Longevity calculations (Pindayu/Amsayu): left out deliberately, since they invite death-timing claims
+- **Longevity calculations (Pindayu, Amsayu, Nisargayu).** Their output is an estimated age at death.
+  Fed into an AI that "predicts", that becomes a death-date claim. Such claims have no
+  demonstrated accuracy and can cause real harm. This omission is deliberate, not a gap.
 
 ## Changes from the previous version (bugs fixed)
 

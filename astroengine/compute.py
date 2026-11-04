@@ -17,14 +17,14 @@ from .panchanga import SolarDay, panchanga
 from .special import special_lagnas, upagrahas
 from .aspects import graha_drishti, virupa_matrix, rashi_drishti, argala
 from .ashtakavarga import ashtakavarga
-from .shadbala import shadbala
+from .shadbala import shadbala, bhava_bala
 from .yogas import all_yogas
 from .conditional_dashas import conditional_dashas
 from .dashas import vimshottari, yogini, ashtottari, chara_dasha, narayana_dasha, kalachakra_dasha, sthira_dasha, shoola_dasha, brahma_dasha
 from .jaimini import jaimini
 from .kp import kp
 from .transits import slow_planet_timeline, saturn_phases, snapshot
-from .tajika import varshaphala
+from .tajika import varshaphala, sahams
 from .sensitivity import sensitivity
 
 ENGINE_VERSION = "4.0.0"
@@ -93,16 +93,21 @@ def compute(birth_data, config=DEFAULT, as_of=None, transit_years=100):
         "unavailable": "no sunrise/sunset at this latitude on the birth date"}
 
     timeline = slow_planet_timeline(c, transit_years)
-    age_now = None
+    varsha = None
     if ref_jd > c.jd:
         from .tajika import solar_return_jd
-        age_now = int((ref_jd - c.jd) / 365.256363)
-        if age_now > 0 and solar_return_jd(c, age_now) > ref_jd:
-            age_now -= 1
-    varsha = None
-    if age_now is not None and age_now >= 0:
-        varsha = {"running": varshaphala(c, age_now, SolarDay),
-                  "next": varshaphala(c, age_now + 1, SolarDay)}
+        try:
+            age_now = int((ref_jd - c.jd) / 365.256363)
+            if age_now > 0 and solar_return_jd(c, age_now) > ref_jd:
+                age_now -= 1
+            varsha = {}
+            for key, age in (("running", age_now), ("next", age_now + 1)):
+                try:
+                    varsha[key] = varshaphala(c, age, SolarDay)
+                except E.EphemerisError as err:
+                    varsha[key] = {"unavailable": str(err)}
+        except E.EphemerisError as err:
+            varsha = {"unavailable": str(err)}
 
     result = {
         "meta": {
@@ -134,6 +139,8 @@ def compute(birth_data, config=DEFAULT, as_of=None, transit_years=100):
                     "rashi_drishti": rashi_drishti(c), "argala": argala(c)},
         "ashtakavarga": ashta,
         "shadbala": shad,
+        "bhava_bala": bhava_bala(c, shad) if "planets" in shad else None,
+        "sahams_natal": sahams(c, day.is_day),
         "yogas": all_yogas(c, comp),
         "dashas": {"vimshottari": vimshottari(c, ref_jd), "yogini": yogini(c),
                    "ashtottari": ashtottari(c, day), "chara": chara_dasha(c),
@@ -143,7 +150,9 @@ def compute(birth_data, config=DEFAULT, as_of=None, transit_years=100):
         "conditional_dashas": conditional_dashas(c, day),
         "jaimini": jai,
         "kp": kp(birth, config, day.vara),
-        "transits": {"at_as_of": snapshot(c, ref_jd, ashta),
+        "transits": {"at_as_of": snapshot(c, ref_jd, ashta)
+                     if E.RANGE_START_JD <= ref_jd <= E.RANGE_END_JD else
+                     {"unavailable": "as_of is outside the bundled ephemeris range (1800-2399 CE)"},
                      "slow_planets_lifetime": timeline,
                      "saturn_phases_from_moon": saturn_phases(c, timeline["Saturn"]["ingresses"],
                                                               transit_years)},
