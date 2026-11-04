@@ -333,3 +333,49 @@ def test_jaimini_ayur_dashas():
         assert bd["sequence"][0] == (SIGNS[b] if b % 2 == 0 else SIGNS[(b + 6) % 12])
         assert all(m["years"] > 0 for m in bd["mahadashas"])
         assert bd["total_years"] == sum(m["years"] for m in bd["mahadashas"])
+
+
+# ------------------------------------------------------------- conditional nakshatra dashas
+def test_conditional_dashas_lords_and_tiling():
+    from astroengine.conditional_dashas import conditional_dashas, TOTALS, SHASHTIHAYANI
+    c = chart("1990-01-01", "12:00")                        # Moon in Dhanishta
+    d = conditional_dashas(c, SolarDay(c))
+    expect = {"shodashottari": "Venus", "dwadashottari": "Rahu", "shattrimsha_sama": "Sun",
+              "shashtihayani": "Saturn", "dwisaptati_sama": "Jupiter"}
+    for k, lord in expect.items():
+        assert d[k]["birth_lord"] == lord, k
+    assert len(d) == 8
+    for k, v in d.items():
+        mds = v["mahadashas"]
+        assert isinstance(v["applicable"], bool)
+        assert datetime.fromisoformat(mds[0]["start"]) <= c.birth.local < datetime.fromisoformat(mds[0]["end"])
+        assert _y(mds[0]["start"], mds[-1]["end"]) > 120
+        for a, b in zip(mds, mds[1:]):
+            assert a["end"] == b["start"]
+        for m in mds:
+            ads = m["antardashas"]
+            assert ads[0]["lord"] == m["lord"] and ads[0]["start"] == m["start"] and ads[-1]["end"] == m["end"]
+        if k in TOTALS:
+            n = len({m["lord"] for m in mds})
+            assert sum(m["years"] for m in mds[:n]) == TOTALS[k]
+    # Shashtihayani arcs tile the zodiac and put Abhijit inside Saturn's group
+    assert SHASHTIHAYANI[0][2] == 0 and SHASHTIHAYANI[-1][3] == 360
+    for a, b in zip(SHASHTIHAYANI, SHASHTIHAYANI[1:]):
+        assert abs(a[3] - b[2]) < 1e-9
+    sat = next(g for g in SHASHTIHAYANI if g[0] == "Saturn")
+    assert sat[2] <= 277.0 < sat[3]
+
+
+def test_conditional_applicability_examples():
+    from astroengine.conditional_dashas import applicability
+    rnd = random.Random(77)
+    seen = {}
+    for _ in range(60):
+        c = chart(f"{rnd.randint(1950, 2020)}-{rnd.randint(1, 12):02d}-{rnd.randint(1, 28):02d}",
+                  f"{rnd.randint(0, 23):02d}:{rnd.randint(0, 59):02d}")
+        a = applicability(c, SolarDay(c))
+        assert a["shashtihayani"]["applicable"] == (c.sign("Sun") == c.lagna)
+        assert a["shatabdika"]["applicable"] == (V.d9(c.asc) == c.lagna)
+        for k, v in a.items():
+            seen[k] = seen.get(k, 0) + bool(v["applicable"])
+    assert seen["shodashottari"] > 0 and seen["dwadashottari"] > 0

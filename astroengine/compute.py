@@ -19,6 +19,7 @@ from .aspects import graha_drishti, virupa_matrix, rashi_drishti, argala
 from .ashtakavarga import ashtakavarga
 from .shadbala import shadbala
 from .yogas import all_yogas
+from .conditional_dashas import conditional_dashas
 from .dashas import vimshottari, yogini, ashtottari, chara_dasha, narayana_dasha, kalachakra_dasha, sthira_dasha, shoola_dasha, brahma_dasha
 from .jaimini import jaimini
 from .kp import kp
@@ -139,6 +140,7 @@ def compute(birth_data, config=DEFAULT, as_of=None, transit_years=100):
                    "narayana": narayana_dasha(c), "kalachakra": kalachakra_dasha(c),
                    "sthira": sthira_dasha(c, jai["brahma"]), "shoola": shoola_dasha(c),
                    "brahma": brahma_dasha(c, jai["brahma"])},
+        "conditional_dashas": conditional_dashas(c, day),
         "jaimini": jai,
         "kp": kp(birth, config, day.vara),
         "transits": {"at_as_of": snapshot(c, ref_jd, ashta),
