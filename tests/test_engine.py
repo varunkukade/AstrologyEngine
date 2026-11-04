@@ -307,3 +307,29 @@ def test_every_dasha_system_tiles_exactly():
             assert ads[0]["start"] == m["start"] and ads[-1]["end"] == m["end"], name
             for a, b in zip(ads, ads[1:]):
                 assert a["end"] == b["start"], name
+
+
+# ------------------------------------------------------------- Sthira / Shoola / Brahma
+def test_jaimini_ayur_dashas():
+    from astroengine import jaimini as J
+    rnd = random.Random(31)
+    for _ in range(15):
+        c = chart(f"{rnd.randint(1950, 2020)}-{rnd.randint(1, 12):02d}-{rnd.randint(1, 28):02d}",
+                  f"{rnd.randint(0, 23):02d}:{rnd.randint(0, 59):02d}")
+        comp = compound_relationships(c)
+        br = J.brahma(c, comp)
+        assert br["brahma"] in br["candidates"] and br["brahma"] not in ("Rahu", "Ketu")
+        ref = SIGNS.index(br["reference_sign"])
+        assert ref in (c.lagna, (c.lagna + 6) % 12)
+        st = DS.sthira_dasha(c, br)
+        assert sum(m["years"] for m in st["mahadashas"]) == 96
+        assert st["mahadashas"][0]["sign"] == br["brahma_sign"]
+        sh = DS.shoola_dasha(c)
+        assert [m["years"] for m in sh["mahadashas"]] == [9] * 12
+        assert sh["seed_sign"] == br["reference_sign"]
+        bd = DS.brahma_dasha(c, br)
+        assert sorted(bd["sequence"]) == sorted(SIGNS)
+        b = br["sign_index"]
+        assert bd["sequence"][0] == (SIGNS[b] if b % 2 == 0 else SIGNS[(b + 6) % 12])
+        assert all(m["years"] > 0 for m in bd["mahadashas"])
+        assert bd["total_years"] == sum(m["years"] for m in bd["mahadashas"])

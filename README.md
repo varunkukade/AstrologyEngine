@@ -68,8 +68,8 @@ Old keys (`y, mo, d, hh, mm, tz_offset`) are still accepted. Times that don't ex
 | `ashtakavarga` | BAV, SAV (by sign and by house), prastara, trikona and ekadhipatya shodhana, shodhya pinda, kakshya order |
 | `shadbala` | all six balas with sub-components, rupas, required minimum, ratio, Ishta/Kashta phala |
 | `yogas` | Raja (incl. Yogakaraka), Dhana, Pancha Mahapurusha, Vipreeta, lunar (Gaja Kesari, Sunapha/Anapha/Durudhara, Kemadruma with cancellation factors, Adhi, Shakata, Amala, Chandra-Mangala), solar (Vesi/Vasi/Ubhayachari, Budhaditya), Parivartana (Maha/Khala/Dainya), Nabhasa Sankhya and Ashraya, Kartari, node yogas; Neecha bhanga as a checklist of 10+ rules; Mangal dosha from lagna/Moon/Venus. Each result names its source rule |
-| `dashas` | Vimshottari (MD/AD/PD for the whole life, 5 levels at `as_of`), Yogini with ADs, Ashtottari with ADs and its applicability tests, Chara (K.N. Rao: both cycles, ±1 year for exalted/debilitated lords, ADs), Narayana (seed sign with the strength rule that decided it, Saturn/Ketu exceptions, both cycles, ADs), Kalachakra (Moon's pada cycle, savya/apasavya group, paramayush, balance, continuation through later padas, ADs, sign jump between consecutive dashas) |
-| `jaimini` | chara karakas (8- and 7-karaka schemes, near-tie flags), stronger co-lord of Scorpio/Aquarius with the reason, all 12 arudha padas incl. AL and UL, Karakamsha, Swamsha |
+| `dashas` | Vimshottari (MD/AD/PD for the whole life, 5 levels at `as_of`), Yogini with ADs, Ashtottari with ADs and its applicability tests, Chara (K.N. Rao: both cycles, ±1 year for exalted/debilitated lords, ADs), Narayana (seed sign with the strength rule that decided it, Saturn/Ketu exceptions, both cycles, ADs), Kalachakra (Moon's pada cycle, savya/apasavya group, paramayush, balance, continuation through later padas, ADs, sign jump between consecutive dashas), and the Jaimini ayur dashas Sthira (7/8/9 years from Brahma's sign), Shoola (9 years each from the stronger of lagna/7th) and Brahma (years from each sign's 6th lord), each with a caution that they are not lifespan estimates |
+| `jaimini` | chara karakas (8- and 7-karaka schemes, near-tie flags), stronger co-lord of Scorpio/Aquarius with the reason, all 12 arudha padas incl. AL and UL, Karakamsha, Swamsha, Brahma (candidates, scores, deciding rule) |
 | `kp` | KP ayanamsa + Placidus cusps; sign/star/sub/sub-sub lords for cusps and planets; four-level house significators with node agency; each planet's significations; cusp sub-lord significations; ruling planets at birth |
 | `transits` | snapshot at `as_of` (house from lagna/Moon, SAV/BAV bindus, kakshya and whether its lord gives a bindu, gochara-favourable flag, vedha, Tara bala, Chandra bala, natal points within 5°); lifetime Jupiter/Saturn/Rahu ingresses and Jupiter/Saturn stations, timed to the second; Sade Sati, Kantaka and Ashtama Shani periods |
 | `varshaphala` | running and next sidereal solar return: varsha lagna, planets, Muntha, four office-holders, Tajika aspects marked applying (ithasala) or separating (ishrafa) |
@@ -103,7 +103,7 @@ Other fixed choices, stated in the output where they apply:
 
 ## Validation
 
-`tests/` holds 65 tests:
+`tests/` holds 66 tests:
 - **Published values:**
   - Saturn's sidereal Pisces ingress: 29 Mar 2025 21:45 IST, published 21:44.
   - Jupiter's 2025 atichara: Cancer on 18 Oct, back to Gemini on 5 Dec.
@@ -146,12 +146,28 @@ labels which one was used.
     restarted from the dasha sign, with years in proportion (P.V.R. Narasimha Rao's book).
     Gati names (Manduka, Markati, Simhavalokana) are not assigned; each dasha reports the sign jump from the previous one.
 
+### Sthira, Shoola and Brahma: confidence and open points
+
+- **Sthira** (from Brahma's sign, zodiacal, 7/8/9 years, 96 in all) and **Shoola** (from
+  the stronger of lagna and 7th, zodiacal, 9 years each, 108 in all) are well agreed.
+- **Brahma (the planet)** is worded differently across texts. The engine scores the lords of
+  the 6th, 8th and 12th from the stronger of lagna/7th on three criteria: odd sign, houses 1–7
+  from that sign, friendly-or-better dignity. Ties are broken by Jaimini planet strength.
+  Rahu and Ketu are excluded. Every candidate and the deciding rule are in the output, so
+  a reader can apply another school's rule.
+- **Shoola antardashas:** authors start them from the dasha sign, from its lord, or from the
+  stronger of the sign and its 7th. The engine uses the last, and the output says so. Even
+  the PyJHora reference uses two different defaults in two places.
+- **Brahma dasha years** (count to each sign's 6th lord, minus one, ±1 for an
+  exalted/debilitated lord, 0 when the lord occupies the sign) often add up to far less
+  than a human life. That total is **not** a lifespan, and the output carries an explicit caution.
+
 ## Not included, on purpose
 
 Each of these has competing definitions or needs tables that couldn't be verified
 here. Shipping a plausible-looking wrong number would be worse for a downstream
 reader than leaving it out.
-- Sthira/Shoola/Brahma and the conditional nakshatra dashas (Shodasottari etc.)
+- The conditional nakshatra dashas (Shodasottari, Dwadasottari etc.)
 - Bhava bala
 - Deeptadi avasthas, Pranapada, Varnada lagna
 - Kala, Mrityu, Ardhaprahara and Yamaghantaka

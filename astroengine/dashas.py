@@ -8,6 +8,7 @@
   year adjustment, stronger co-lord for Scorpio/Aquarius, antardashas.
 * Narayana dasha (Sanjay Rath), Jagannatha Hora's sequence rules.
 * Kalachakra dasha (BPHS), nakshatra-pada cycles.
+* Jaimini ayur dashas: Sthira, Shoola, Brahma.
 """
 from .constants import SIGNS, VIM_ORDER, VIM_YEARS, NAK_SPAN, PADA_SPAN, SAVYA, SIGN_LORD, NAKSHATRAS
 from .chart import sign_of, house_from
@@ -387,3 +388,88 @@ def kalachakra_dasha(chart, years=120):
                            "cycle": [SIGNS[s] for s in cyc], "paramayush": param},
             "balance_at_birth_years": KC_YEARS[cyc[idx]] - (elapsed - acc),
             "mahadashas": periods}
+
+
+# ---------------------------------------------------------------- Jaimini ayur dashas
+AYUR_CAUTION = ("Jaimini ayur (longevity-reckoning) dasha. The end of the sequence is NOT a "
+                "lifespan or death estimate: the texts disagree on these rules and classical "
+                "use combines them with other factors. Treat as period data only.")
+def _equal_ads(f, t, yrs, yd, order):
+    return [{"sign": SIGNS[a], "start": f(t + k * yrs / 12.0 * yd),
+             "end": f(t + (k + 1) * yrs / 12.0 * yd)} for k, a in enumerate(order)]
+
+
+def _sign_dasha(chart, seq_years, ad_order):
+    f = _fmt(chart.birth.local.tzinfo)
+    yd = chart.config.dasha_year_days
+    out, t = [], chart.jd
+    for s, yrs, extra in seq_years:
+        if yrs <= 0:
+            continue
+        order = ad_order(s)
+        out.append({"sign": SIGNS[s], "house_from_lagna": house_from(s, chart.lagna), "years": yrs,
+                    **extra, "start": f(t), "end": f(t + yrs * yd),
+                    "antardashas": _equal_ads(f, t, yrs, yd, order)})
+        t += yrs * yd
+    return out
+
+
+def sthira_dasha(chart, brahma_info):
+    """Starts from Brahma's sign, always zodiacal; movable 7, fixed 8, dual 9
+    years (96 in all). Antardashas: 12 equal, zodiacal from the dasha sign."""
+    b = brahma_info["sign_index"]
+    seq = [((b + k) % 12, [7, 8, 9][((b + k) % 12) % 3], {}) for k in range(12)]
+    return {"method": "Sthira dasha (Jaimini): from Brahma's sign, zodiacal, 7/8/9 years by sign type",
+            "caution": AYUR_CAUTION,
+            "seed_sign": SIGNS[b], "seed_planet": brahma_info["brahma"],
+            "mahadashas": _sign_dasha(chart, seq, lambda s: [(s + k) % 12 for k in range(12)])}
+
+
+def shoola_dasha(chart):
+    """Starts from the stronger of lagna and 7th, always zodiacal, 9 years per
+    sign (108 in all). Antardashas start from the stronger of the dasha sign and
+    its 7th and run zodiacally (one of the conventions in use; see note)."""
+    from .jaimini import stronger_sign
+    seed, why = stronger_sign(chart, chart.lagna, (chart.lagna + 6) % 12)
+    seq = [((seed + k) % 12, 9, {}) for k in range(12)]
+
+    def ads(s):
+        a = stronger_sign(chart, s, (s + 6) % 12)[0]
+        return [(a + k) % 12 for k in range(12)]
+    return {"method": "Shoola dasha (Jaimini): from the stronger of lagna and 7th, zodiacal, 9 years each",
+            "caution": AYUR_CAUTION,
+            "seed_sign": SIGNS[seed], "seed_reason": why,
+            "antardasha_note": "antardashas start from the stronger of the dasha sign and its 7th; "
+                               "other authors start them from the dasha sign or from its lord",
+            "mahadashas": _sign_dasha(chart, seq, ads)}
+
+
+def brahma_dasha(chart, brahma_info):
+    """From Brahma's sign: zodiacal if that sign is odd; if even, from the 7th
+    from it, anti-zodiacally. Years: count from the dasha sign to the lord of its
+    6th (forward for odd signs, backward for even) minus one; exalted +1,
+    debilitated -1; lord in the dasha sign gives 0 (dasha skipped)."""
+    b = brahma_info["sign_index"]
+    if b % 2 == 0:
+        order = [(b + k) % 12 for k in range(12)]
+    else:
+        order = [(b + 6 - k) % 12 for k in range(12)]
+    seq = []
+    for s in order:
+        lord, why = stronger_lord(chart, (s + 5) % 12)
+        ls = chart.sign(lord)
+        cnt = (ls - s) % 12 + 1 if s % 2 == 0 else (s - ls) % 12 + 1
+        yrs, adj = cnt - 1, None
+        if ls != s:
+            if ls == exaltation_sign(lord, chart.config):
+                yrs, adj = yrs + 1, "+1 (lord exalted)"
+            elif ls == debilitation_sign(lord, chart.config):
+                yrs, adj = yrs - 1, "-1 (lord debilitated)"
+        seq.append((s, yrs, {"sixth_lord": lord, "lord_choice": why, "adjustment": adj}))
+    return {"method": "Brahma dasha (Jaimini, as in P.V.R. Narasimha Rao / Jagannatha Hora)",
+            "seed_sign": SIGNS[b], "seed_planet": brahma_info["brahma"],
+            "sequence": [SIGNS[s] for s in order],
+            "zero_year_signs": [SIGNS[s] for s, y, _ in seq if y <= 0],
+            "total_years": sum(max(0, y) for _, y, _ in seq),
+            "caution": AYUR_CAUTION,
+            "mahadashas": _sign_dasha(chart, seq, lambda s: [(s + k) % 12 for k in range(12)])}

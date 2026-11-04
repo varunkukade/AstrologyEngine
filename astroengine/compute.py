@@ -19,7 +19,7 @@ from .aspects import graha_drishti, virupa_matrix, rashi_drishti, argala
 from .ashtakavarga import ashtakavarga
 from .shadbala import shadbala
 from .yogas import all_yogas
-from .dashas import vimshottari, yogini, ashtottari, chara_dasha, narayana_dasha, kalachakra_dasha
+from .dashas import vimshottari, yogini, ashtottari, chara_dasha, narayana_dasha, kalachakra_dasha, sthira_dasha, shoola_dasha, brahma_dasha
 from .jaimini import jaimini
 from .kp import kp
 from .transits import slow_planet_timeline, saturn_phases, snapshot
@@ -86,6 +86,7 @@ def compute(birth_data, config=DEFAULT, as_of=None, transit_years=100):
              for h in range(12)]
 
     ashta = ashtakavarga(c)
+    jai = jaimini(c, comp)
     hora_lord = pan.get("hora", {}).get("lord")
     shad = shadbala(c, comp, day, hora_lord) if hora_lord else {
         "unavailable": "no sunrise/sunset at this latitude on the birth date"}
@@ -135,8 +136,10 @@ def compute(birth_data, config=DEFAULT, as_of=None, transit_years=100):
         "yogas": all_yogas(c, comp),
         "dashas": {"vimshottari": vimshottari(c, ref_jd), "yogini": yogini(c),
                    "ashtottari": ashtottari(c, day), "chara": chara_dasha(c),
-                   "narayana": narayana_dasha(c), "kalachakra": kalachakra_dasha(c)},
-        "jaimini": jaimini(c),
+                   "narayana": narayana_dasha(c), "kalachakra": kalachakra_dasha(c),
+                   "sthira": sthira_dasha(c, jai["brahma"]), "shoola": shoola_dasha(c),
+                   "brahma": brahma_dasha(c, jai["brahma"])},
+        "jaimini": jai,
         "kp": kp(birth, config, day.vara),
         "transits": {"at_as_of": snapshot(c, ref_jd, ashta),
                      "slow_planets_lifetime": timeline,

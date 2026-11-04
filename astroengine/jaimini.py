@@ -139,11 +139,80 @@ def karakamsha(c, karakas):
             "swamsha_navamsa_lagna": SIGNS[d9(c.asc)]}
 
 
-def jaimini(c):
+def jaimini(c, compound=None):
+    from .dignity import compound_relationships
+    compound = compound or compound_relationships(c)
     k8 = chara_karakas(c, 8)
     k7 = chara_karakas(c, 7)
     primary = k8 if c.config.chara_karaka_scheme == 8 else k7
     return {"chara_karakas": primary, "chara_karakas_alternate": k7 if primary is k8 else k8,
             "arudha_padas": arudha_padas(c), "karakamsha": karakamsha(c, primary),
+            "brahma": brahma(c, compound),
             "stronger_co_lords": {SIGNS[s]: dict(zip(("lord", "reason"), stronger_lord(c, s)))
                                   for s in CO_LORD}}
+
+
+def stronger_planet(c, a, b):
+    """Jaimini planet strength: (1) conjoined with more planets; (2) more of
+    Jupiter, Mercury and its dispositor conjoining or rashi-aspecting it;
+    (3) exalted; (4) more advanced in degrees."""
+    from .aspects import rashi_drishti_signs
+    if a == b:
+        return a, "same planet"
+    conj = {x: len([p for p in PLANETS if p != x and c.sign(p) == c.sign(x)]) for x in (a, b)}
+    if conj[a] != conj[b]:
+        w = a if conj[a] > conj[b] else b
+        return w, "rule 1: conjoined with more planets"
+
+    def r2(x):
+        s, k = c.sign(x), 0
+        for p in ("Mercury", "Jupiter", SIGN_LORD[s]):
+            if p == x:
+                continue
+            k += (c.sign(p) == s) + (s in rashi_drishti_signs(c.sign(p)))
+        return k
+    v = {x: r2(x) for x in (a, b)}
+    if v[a] != v[b]:
+        w = a if v[a] > v[b] else b
+        return w, "rule 2: more association/aspect of Jupiter, Mercury, dispositor"
+    ex = {x: c.sign(x) == exaltation_sign(x, c.config) for x in (a, b)}
+    if ex[a] != ex[b]:
+        w = a if ex[a] else b
+        return w, "rule 3: exalted"
+    w = a if _jaimini_degree(c, a) >= _jaimini_degree(c, b) else b
+    return w, "rule 4: more advanced in degrees"
+
+
+GOOD_DIGNITY = ("exalted", "moolatrikona", "own", "great_friend", "friend")
+
+
+def brahma(c, compound):
+    """Brahma: among the lords of the 6th, 8th and 12th from the stronger of
+    lagna and 7th (Rahu/Ketu excluded, so Scorpio/Aquarius give Mars/Saturn),
+    the planet scoring highest on: placed in an odd sign; placed in houses 1-7
+    from that stronger sign; dignity friendly or better. Ties go to Jaimini
+    planet strength. Texts word this rule differently; candidates are reported."""
+    from .dignity import rasi_dignity
+    S, why = stronger_sign(c, c.lagna, (c.lagna + 6) % 12)
+    lords = []
+    for h in (6, 8, 12):
+        l = SIGN_LORD[(S + h - 1) % 12]
+        if l not in lords:
+            lords.append(l)
+    cands = {}
+    for l in lords:
+        s = c.sign(l)
+        crit = {"odd_sign": s % 2 == 0, "in_houses_1_to_7": house_from(s, S) <= 7,
+                "friendly_or_better": rasi_dignity(l, c.pos[l], compound, c.config) in GOOD_DIGNITY}
+        cands[l] = {"rules_houses_from_reference": [h for h in (6, 8, 12)
+                                                    if SIGN_LORD[(S + h - 1) % 12] == l],
+                    "sign": SIGNS[s], "criteria": crit, "score": sum(crit.values())}
+    top = max(v["score"] for v in cands.values())
+    best = [l for l in lords if cands[l]["score"] == top]
+    pick, reason = best[0], f"highest score {top}"
+    for other in best[1:]:
+        pick, r = stronger_planet(c, pick, other)
+        reason = f"tied on score {top}; {r}"
+    return {"reference_sign": SIGNS[S], "reference_reason": why, "candidates": cands,
+            "brahma": pick, "brahma_sign": SIGNS[c.sign(pick)], "sign_index": c.sign(pick),
+            "selection": reason}
