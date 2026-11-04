@@ -1,0 +1,5 @@
+# personal birth data - never commit
+birth.json
+__pycache__/
+*.pyc
+.venv/
