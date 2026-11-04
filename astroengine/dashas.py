@@ -6,8 +6,10 @@
   applicability tests.
 * Jaimini Chara dasha, K.N. Rao's method: two cycles, exaltation/debilitation
   year adjustment, stronger co-lord for Scorpio/Aquarius, antardashas.
+* Narayana dasha (Sanjay Rath), Jagannatha Hora's sequence rules.
+* Kalachakra dasha (BPHS), nakshatra-pada cycles.
 """
-from .constants import SIGNS, VIM_ORDER, VIM_YEARS, NAK_SPAN, SAVYA, SIGN_LORD
+from .constants import SIGNS, VIM_ORDER, VIM_YEARS, NAK_SPAN, PADA_SPAN, SAVYA, SIGN_LORD, NAKSHATRAS
 from .chart import sign_of, house_from
 from .dignity import exaltation_sign, debilitation_sign
 from .jaimini import stronger_lord
@@ -27,6 +29,7 @@ def _vim_children(lord, start, span_years, yd):
         yrs = span_years * VIM_YEARS[l] / 120.0
         out.append({"lord": l, "start": t, "end": t + yrs * yd, "years": yrs})
         t += yrs * yd
+    out[-1]["end"] = start + span_years * yd
     return out
 
 
@@ -109,6 +112,7 @@ def yogini(chart, cycles=3):
             span = yrs * y2 / 36.0
             ads.append({"yogini": n2, "lord": l2, "start": f(ta), "end": f(ta + span * yd)})
             ta += span * yd
+        ads[-1]["end"] = f(t + yrs * yd)
         out.append({"yogini": name, "lord": lord, "years": yrs, "start": f(t),
                     "end": f(t + yrs * yd), "antardashas": ads})
         t += yrs * yd
@@ -145,6 +149,7 @@ def ashtottari(chart, day):
             span = y * ASHT_YEARS[l2] / 108.0
             ads.append({"lord": l2, "start": f(ta), "end": f(ta + span * yd)})
             ta += span * yd
+        ads[-1]["end"] = f(t + y * yd)
         out.append({"lord": l, "years": y, "start": f(t), "end": f(t + y * yd), "antardashas": ads})
         t += y * yd
     lagna_lord = SIGN_LORD[chart.lagna]
@@ -196,11 +201,11 @@ def chara_dasha(chart):
             if yrs <= 0:
                 continue
             ad_fwd = s in SAVYA
-            ads, ta = [], t
+            ads = []
             for k in range(1, 13):
                 a = (s + (k if ad_fwd else -k)) % 12
-                ads.append({"sign": SIGNS[a], "start": f(ta), "end": f(ta + yrs / 12.0 * yd)})
-                ta += yrs / 12.0 * yd
+                ads.append({"sign": SIGNS[a], "start": f(t + (k - 1) * yrs / 12.0 * yd),
+                            "end": f(t + k * yrs / 12.0 * yd)})
             periods.append({"cycle": cycle, "sign": SIGNS[s], "house_from_lagna": house_from(s, chart.lagna),
                             "years": yrs, "lord": lord, "lord_choice": why, "adjustment": adj if cycle == 1 else None,
                             "start": f(t), "end": f(t + yrs * yd), "antardashas": ads})
@@ -210,4 +215,175 @@ def chara_dasha(chart):
                       "12 - first; antardashas begin from the next sign in the dasha sign's "
                       "direction and end with the dasha sign",
             "direction": "zodiacal" if forward else "anti-zodiacal",
+            "mahadashas": periods}
+
+
+# ---------------------------------------------------------------- Narayana
+def narayana_sequence(seed, parity_flip=False, saturn=False):
+    """Order of the 12 Narayana dasha signs from the seed sign.
+    movable: consecutive; fixed: every 6th sign; dual: trines grouped by kendras.
+    Odd seed runs zodiacally, even seed in reverse. Saturn in the seed makes the
+    order plainly zodiacal; Ketu in the seed reverses the odd/even rule."""
+    if saturn:
+        return [(seed + k) % 12 for k in range(12)]
+    fwd = (seed % 2 == 0) != parity_flip          # index even = odd sign
+    q = seed % 3
+    if q == 0:
+        step = 1 if fwd else -1
+        return [(seed + step * k) % 12 for k in range(12)]
+    if q == 1:
+        step = 5 if fwd else -5
+        return [(seed + step * k) % 12 for k in range(12)]
+    out = []
+    for g in range(4):
+        base = (seed + (3 * g if fwd else -3 * g)) % 12
+        tri = [0, 8, 4] if fwd else [0, 4, 8]
+        out += [(base + t) % 12 for t in tri]
+    return out
+
+
+def _narayana_years(chart, s):
+    lord, why = stronger_lord(chart, s)
+    ls = chart.sign(lord)
+    count = (ls - s) % 12 + 1 if s in SAVYA else (s - ls) % 12 + 1
+    yrs = count - 1 or 12
+    adj = None
+    if ls == exaltation_sign(lord, chart.config):
+        yrs, adj = yrs + 1, "+1 (lord exalted)"
+    elif ls == debilitation_sign(lord, chart.config):
+        yrs, adj = yrs - 1, "-1 (lord debilitated)"
+    return yrs, lord, why, adj
+
+
+def _narayana_antar_order(chart, s):
+    from .jaimini import stronger_sign
+    l1 = stronger_lord(chart, s)[0]
+    l7 = stronger_lord(chart, (s + 6) % 12)[0]
+    seed, _ = stronger_sign(chart, chart.sign(l1), chart.sign(l7))
+    step = 1 if seed % 2 == 0 else -1
+    if chart.sign("Saturn") == seed:
+        step = 1
+    if chart.sign("Ketu") == s:
+        step = -step
+    return [(seed + step * k) % 12 for k in range(12)], seed
+
+
+def narayana_dasha(chart):
+    from .jaimini import stronger_sign
+    f = _fmt(chart.birth.local.tzinfo)
+    yd = chart.config.dasha_year_days
+    seed, why = stronger_sign(chart, chart.lagna, (chart.lagna + 6) % 12)
+    ketu, sat = chart.sign("Ketu") == seed, chart.sign("Saturn") == seed
+    seq = narayana_sequence(seed, parity_flip=ketu, saturn=sat and not ketu)
+    first = {s: _narayana_years(chart, s) for s in seq}
+    periods, t = [], chart.jd
+    for cycle in (1, 2):
+        for s in seq:
+            y1, lord, lwhy, adj = first[s]
+            yrs = y1 if cycle == 1 else max(0, 12 - y1)
+            if yrs <= 0:
+                continue
+            order, aseed = _narayana_antar_order(chart, s)
+            ads = []
+            for k, a in enumerate(order):
+                ads.append({"sign": SIGNS[a], "start": f(t + k * yrs / 12.0 * yd),
+                            "end": f(t + (k + 1) * yrs / 12.0 * yd)})
+            periods.append({"cycle": cycle, "sign": SIGNS[s], "house_from_lagna": house_from(s, chart.lagna),
+                            "years": yrs, "lord": lord, "lord_choice": lwhy,
+                            "adjustment": adj if cycle == 1 else None,
+                            "start": f(t), "end": f(t + yrs * yd),
+                            "antardasha_seed": SIGNS[aseed], "antardashas": ads})
+            t += yrs * yd
+    return {"method": "Narayana dasha (Rath, as implemented in Jagannatha Hora): seed is the "
+                      "stronger of lagna and 7th; sequence by sign type with Saturn/Ketu "
+                      "exceptions; years counted by footedness, exalted +1 / debilitated -1; "
+                      "second cycle = 12 - first; 12 equal antardashas",
+            "seed_sign": SIGNS[seed], "seed_reason": why,
+            "exception": "Ketu in seed" if ketu else ("Saturn in seed" if sat else None),
+            "sequence": [SIGNS[s] for s in seq], "mahadashas": periods}
+
+
+# ---------------------------------------------------------------- Kalachakra
+KC_YEARS = [7, 16, 9, 21, 5, 9, 16, 7, 10, 4, 4, 10]      # Aries..Pisces (BPHS)
+KC_GROUPS = [  # (name, nakshatra indices, 4 pada cycles)
+    ("savya", [0, 2, 6, 8, 12, 14, 18, 20, 24],
+     [[0, 1, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 7, 6, 5, 3, 4, 2],
+      [1, 0, 11, 10, 9, 8, 0, 1, 2], [3, 4, 5, 6, 7, 8, 9, 10, 11]]),
+    ("savya", [1, 7, 13, 19, 25, 26],
+     [[7, 6, 5, 3, 4, 2, 1, 0, 11], [10, 9, 8, 0, 1, 2, 3, 4, 5],
+      [6, 7, 8, 9, 10, 11, 7, 6, 5], [3, 4, 2, 1, 0, 11, 10, 9, 8]]),
+    ("apasavya", [3, 9, 15, 21],
+     [[8, 9, 10, 11, 0, 1, 2, 4, 3], [5, 6, 7, 11, 10, 9, 8, 7, 6],
+      [5, 4, 3, 2, 1, 0, 8, 9, 10], [11, 0, 1, 2, 4, 3, 5, 6, 7]]),
+    ("apasavya", [4, 5, 10, 11, 16, 17, 22, 23],
+     [[11, 10, 9, 8, 7, 6, 5, 4, 3], [2, 1, 0, 8, 9, 10, 11, 0, 1],
+      [2, 4, 3, 5, 6, 7, 11, 10, 9], [8, 7, 6, 5, 4, 3, 2, 1, 0]]),
+]
+KC_PARAMAYUSH = {"savya": [100, 85, 83, 86], "apasavya": [86, 83, 85, 100]}
+for _n, _naks, _cyc in KC_GROUPS:
+    for _i, _c in enumerate(_cyc):
+        assert sum(KC_YEARS[s] for s in _c) == KC_PARAMAYUSH[_n][_i]
+assert sorted(sum((g[1] for g in KC_GROUPS), [])) == list(range(27))
+
+
+def _kc_cycle(abs_pada):
+    nak, pada = (abs_pada % 108) // 4, abs_pada % 4
+    for name, naks, cycles in KC_GROUPS:
+        if nak in naks:
+            return name, cycles[pada]
+
+
+def kalachakra_dasha(chart, years=120):
+    """Moon's nakshatra pada fixes a 9-sign cycle whose sign-years sum to its
+    paramayush; the elapsed part of the pada gives the balance. After the cycle,
+    the next pada's cycle follows. Antardashas: the same cycle started from the
+    dasha sign, years in proportion (BPHS / P.V.R. Narasimha Rao)."""
+    f = _fmt(chart.birth.local.tzinfo)
+    yd = chart.config.dasha_year_days
+    moon = chart.pos["Moon"]
+    P = int(moon // PADA_SPAN)
+    frac = (moon - P * PADA_SPAN) / PADA_SPAN
+    gname, cyc = _kc_cycle(P)
+    param = sum(KC_YEARS[s] for s in cyc)
+    elapsed = frac * param
+    acc, idx = 0.0, 0
+    for i, s in enumerate(cyc):
+        if acc + KC_YEARS[s] > elapsed:
+            idx = i
+            break
+        acc += KC_YEARS[s]
+    t = chart.jd - (elapsed - acc) * yd
+    periods, p, i = [], P, idx
+    while True:
+        gn, cy = _kc_cycle(p)
+        tot = sum(KC_YEARS[s] for s in cy)
+        while i < 9:
+            s = cy[i]
+            y = KC_YEARS[s]
+            rot = cy[i:] + cy[:i]
+            ads, ta = [], t
+            for a in rot:
+                span = y * KC_YEARS[a] / tot
+                ads.append({"sign": SIGNS[a], "start": f(ta), "end": f(ta + span * yd)})
+                ta += span * yd
+            ads[-1]["end"] = f(t + y * yd)
+            prev = periods[-1]["_sign"] if periods else None
+            periods.append({"sign": SIGNS[s], "_sign": s, "years": y,
+                            "pada_cycle": {"nakshatra": NAKSHATRAS[(p % 108) // 4][0],
+                                           "pada": p % 4 + 1, "group": gn, "paramayush": tot},
+                            "jump_from_previous": None if prev is None else ((s - prev) % 12),
+                            "start": f(t), "end": f(t + y * yd), "antardashas": ads})
+            t += y * yd
+            i += 1
+        if t > chart.jd + years * yd:
+            break
+        p, i = p + 1, 0
+    for x in periods:
+        x.pop("_sign")
+    return {"method": "Kalachakra (BPHS): pada cycle with balance from the elapsed fraction "
+                      "of the Moon's pada, continued through following padas; antardashas "
+                      "proportional within the cycle",
+            "birth_pada": {"nakshatra": NAKSHATRAS[P // 4][0], "pada": P % 4 + 1, "group": gname,
+                           "cycle": [SIGNS[s] for s in cyc], "paramayush": param},
+            "balance_at_birth_years": KC_YEARS[cyc[idx]] - (elapsed - acc),
             "mahadashas": periods}

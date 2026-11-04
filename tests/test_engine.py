@@ -242,3 +242,68 @@ def test_fuzz_extreme_locations(seed):
          "lat": lat, "lon": rnd.uniform(-180, 180)}
     r = compute(b, as_of=datetime(2399, 1, 1, tzinfo=timezone.utc), transit_years=2)
     json.dumps(r)
+
+
+# ------------------------------------------------------------- Narayana / Kalachakra
+# Reference rows from Jagannatha Hora's tables (as published in PyJHora const.py).
+NARAYANA_REF = {
+    1: [1, 8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6],
+    2: [2, 10, 6, 5, 1, 9, 8, 4, 0, 11, 7, 3],
+    5: [5, 9, 1, 2, 6, 10, 11, 3, 7, 8, 0, 4],
+    10: [10, 3, 8, 1, 6, 11, 4, 9, 2, 7, 0, 5],
+    11: [11, 3, 7, 8, 0, 4, 5, 9, 1, 2, 6, 10],
+}
+NARAYANA_KETU_REF = {2: [2, 6, 10, 11, 3, 7, 8, 0, 4, 5, 9, 1], 1: [1, 6, 11, 4, 9, 2, 7, 0, 5, 10, 3, 8]}
+
+
+def test_narayana_sequences_match_reference():
+    for s, row in NARAYANA_REF.items():
+        assert DS.narayana_sequence(s) == row
+    for s, row in NARAYANA_KETU_REF.items():
+        assert DS.narayana_sequence(s, parity_flip=True) == row
+    for s in range(12):
+        assert DS.narayana_sequence(s, saturn=True) == [(s + k) % 12 for k in range(12)]
+        assert sorted(DS.narayana_sequence(s)) == list(range(12))
+
+
+def test_narayana_structure():
+    rnd = random.Random(21)
+    for _ in range(10):
+        c = chart(f"{rnd.randint(1950, 2020)}-{rnd.randint(1, 12):02d}-05", f"{rnd.randint(0, 23):02d}:40")
+        n = DS.narayana_dasha(c)
+        assert len(n["sequence"]) == 12 and n["mahadashas"][0]["sign"] == n["seed_sign"]
+        assert n["seed_sign"] in (SIGNS[c.lagna], SIGNS[(c.lagna + 6) % 12])
+        for m in n["mahadashas"]:
+            assert 0 < m["years"] <= 13 and len(m["antardashas"]) == 12
+            assert m["antardashas"][-1]["end"] == m["end"]
+
+
+def test_kalachakra_structure():
+    rnd = random.Random(8)
+    for _ in range(15):
+        c = chart(f"{rnd.randint(1950, 2020)}-{rnd.randint(1, 12):02d}-{rnd.randint(1, 28):02d}",
+                  f"{rnd.randint(0, 23):02d}:{rnd.randint(0, 59):02d}")
+        k = DS.kalachakra_dasha(c)
+        mds = k["mahadashas"]
+        assert datetime.fromisoformat(mds[0]["start"]) <= c.birth.local < datetime.fromisoformat(mds[0]["end"])
+        assert 0 < k["balance_at_birth_years"] <= mds[0]["years"]
+        for a, b in zip(mds, mds[1:]):
+            assert a["end"] == b["start"]
+        for m in mds:
+            assert m["antardashas"][0]["sign"] == m["sign"] and len(m["antardashas"]) == 9
+            assert abs(_y(m["antardashas"][0]["start"], m["antardashas"][-1]["end"]) - m["years"]) < 1e-4
+        assert _y(mds[0]["start"], mds[-1]["end"]) > 120
+
+
+def test_every_dasha_system_tiles_exactly():
+    r = compute({"date": "1984-07-19", "time": "05:47:12", **DELHI},
+                as_of=datetime(2026, 1, 1, tzinfo=timezone.utc), transit_years=1)
+    for name, d in r["dashas"].items():
+        mds = d["mahadashas"]
+        for a, b in zip(mds, mds[1:]):
+            assert a["end"] == b["start"], name
+        for m in mds:
+            ads = m["antardashas"]
+            assert ads[0]["start"] == m["start"] and ads[-1]["end"] == m["end"], name
+            for a, b in zip(ads, ads[1:]):
+                assert a["end"] == b["start"], name

@@ -19,7 +19,7 @@ from .aspects import graha_drishti, virupa_matrix, rashi_drishti, argala
 from .ashtakavarga import ashtakavarga
 from .shadbala import shadbala
 from .yogas import all_yogas
-from .dashas import vimshottari, yogini, ashtottari, chara_dasha
+from .dashas import vimshottari, yogini, ashtottari, chara_dasha, narayana_dasha, kalachakra_dasha
 from .jaimini import jaimini
 from .kp import kp
 from .transits import slow_planet_timeline, saturn_phases, snapshot
@@ -134,7 +134,8 @@ def compute(birth_data, config=DEFAULT, as_of=None, transit_years=100):
         "shadbala": shad,
         "yogas": all_yogas(c, comp),
         "dashas": {"vimshottari": vimshottari(c, ref_jd), "yogini": yogini(c),
-                   "ashtottari": ashtottari(c, day), "chara": chara_dasha(c)},
+                   "ashtottari": ashtottari(c, day), "chara": chara_dasha(c),
+                   "narayana": narayana_dasha(c), "kalachakra": kalachakra_dasha(c)},
         "jaimini": jaimini(c),
         "kp": kp(birth, config, day.vara),
         "transits": {"at_as_of": snapshot(c, ref_jd, ashta),

@@ -63,6 +63,47 @@ def stronger_lord(c, sign):
     return w, f"{w} more advanced in degrees"
 
 
+def stronger_sign(c, a, b):
+    """Jaimini strength of two signs (rules as used for Narayana dasha, Rath/JHora):
+    (1) more planets in it; (2) more of Jupiter, Mercury and its lord conjoined with
+    or rashi-aspecting it; (3) contains an exalted planet; (4) lord placed in a sign of
+    the opposite oddity; (5) dual > fixed > movable; (6) lord more advanced in degrees."""
+    from .aspects import rashi_drishti_signs
+    if a == b:
+        return a, "same sign"
+    n = {s: len(c.occupants(s)) for s in (a, b)}
+    if n[a] != n[b]:
+        w = a if n[a] > n[b] else b
+        return w, f"rule 1: more planets ({SIGNS[a]} {n[a]}, {SIGNS[b]} {n[b]})"
+
+    def r2(s):
+        k = 0
+        for p in ("Mercury", "Jupiter", SIGN_LORD[s]):
+            if c.sign(p) == s:
+                k += 1
+            if s in rashi_drishti_signs(c.sign(p)):
+                k += 1
+        return k
+    v = {s: r2(s) for s in (a, b)}
+    if v[a] != v[b]:
+        w = a if v[a] > v[b] else b
+        return w, "rule 2: more association/aspect of Jupiter, Mercury, own lord"
+    ex = {s: any(exaltation_sign(p, c.config) == s for p in c.occupants(s)) for s in (a, b)}
+    if ex[a] != ex[b]:
+        w = a if ex[a] else b
+        return w, "rule 3: contains an exalted planet"
+    odd = {s: (s % 2) != (c.sign(SIGN_LORD[s]) % 2) for s in (a, b)}
+    if odd[a] != odd[b]:
+        w = a if odd[a] else b
+        return w, "rule 4: lord in a sign of different oddity"
+    if a % 3 != b % 3:
+        w = a if a % 3 > b % 3 else b
+        return w, "rule 5: dual > fixed > movable"
+    la, lb = stronger_lord(c, a)[0], stronger_lord(c, b)[0]
+    w = a if _jaimini_degree(c, la) >= _jaimini_degree(c, lb) else b
+    return w, "rule 6: lord more advanced in degrees"
+
+
 def arudha_of_sign(c, sign):
     lord, why = stronger_lord(c, sign)
     ls = c.sign(lord)

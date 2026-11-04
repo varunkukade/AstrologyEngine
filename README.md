@@ -68,7 +68,7 @@ Old keys (`y, mo, d, hh, mm, tz_offset`) are still accepted. Times that don't ex
 | `ashtakavarga` | BAV, SAV (by sign and by house), prastara, trikona and ekadhipatya shodhana, shodhya pinda, kakshya order |
 | `shadbala` | all six balas with sub-components, rupas, required minimum, ratio, Ishta/Kashta phala |
 | `yogas` | Raja (incl. Yogakaraka), Dhana, Pancha Mahapurusha, Vipreeta, lunar (Gaja Kesari, Sunapha/Anapha/Durudhara, Kemadruma with cancellation factors, Adhi, Shakata, Amala, Chandra-Mangala), solar (Vesi/Vasi/Ubhayachari, Budhaditya), Parivartana (Maha/Khala/Dainya), Nabhasa Sankhya and Ashraya, Kartari, node yogas; Neecha bhanga as a checklist of 10+ rules; Mangal dosha from lagna/Moon/Venus. Each result names its source rule |
-| `dashas` | Vimshottari (MD/AD/PD for the whole life, 5 levels at `as_of`), Yogini with ADs, Ashtottari with ADs and its applicability tests, Chara (K.N. Rao: both cycles, ±1 year for exalted/debilitated lords, ADs) |
+| `dashas` | Vimshottari (MD/AD/PD for the whole life, 5 levels at `as_of`), Yogini with ADs, Ashtottari with ADs and its applicability tests, Chara (K.N. Rao: both cycles, ±1 year for exalted/debilitated lords, ADs), Narayana (seed sign with the strength rule that decided it, Saturn/Ketu exceptions, both cycles, ADs), Kalachakra (Moon's pada cycle, savya/apasavya group, paramayush, balance, continuation through later padas, ADs, sign jump between consecutive dashas) |
 | `jaimini` | chara karakas (8- and 7-karaka schemes, near-tie flags), stronger co-lord of Scorpio/Aquarius with the reason, all 12 arudha padas incl. AL and UL, Karakamsha, Swamsha |
 | `kp` | KP ayanamsa + Placidus cusps; sign/star/sub/sub-sub lords for cusps and planets; four-level house significators with node agency; each planet's significations; cusp sub-lord significations; ruling planets at birth |
 | `transits` | snapshot at `as_of` (house from lagna/Moon, SAV/BAV bindus, kakshya and whether its lord gives a bindu, gochara-favourable flag, vedha, Tara bala, Chandra bala, natal points within 5°); lifetime Jupiter/Saturn/Rahu ingresses and Jupiter/Saturn stations, timed to the second; Sade Sati, Kantaka and Ashtama Shani periods |
@@ -103,7 +103,7 @@ Other fixed choices, stated in the output where they apply:
 
 ## Validation
 
-`tests/` holds 61 tests:
+`tests/` holds 65 tests:
 - **Published values:**
   - Saturn's sidereal Pisces ingress: 29 Mar 2025 21:45 IST, published 21:44.
   - Jupiter's 2025 atichara: Cancer on 18 Oct, back to Gemini on 5 Dec.
@@ -128,12 +128,30 @@ be run here). Expect differences of a few virupas in Shadbala (Chesta and Kala b
 depend on implementation details) and on any rule where schools differ. The output
 labels which one was used.
 
+### How Narayana and Kalachakra were checked
+
+- **Narayana:** the dasha order is generated from the rules (movable signs
+  consecutive, fixed signs every 6th, dual signs by trines grouped in kendras,
+  Saturn/Ketu exceptions). It reproduces all 36 rows of Jagannatha Hora's sequence
+  tables as published in the open-source PyJHora project. Sign strength uses Rath's six
+  rules, and the output names the rule that decided the seed.
+- **Kalachakra:** sign years and the 16 pada cycles follow BPHS. Every cycle is checked at
+  import to sum to its paramayush (100/85/83/86), and every nakshatra to belong to
+  exactly one group. Two deliberate differences from PyJHora:
+  - After a pada's cycle the dasha continues with the *actual next pada*, so
+    Mrigashira 4 is followed by Ardra 1. PyJHora uses a fixed group swap that is wrong for some stars.
+  - Antardashas of the birth dasha run from that dasha's true start, before birth,
+    exactly as in Vimshottari. They aren't compressed into the remaining balance.
+  - Kalachakra antardasha schemes differ between authors. This engine uses the cycle
+    restarted from the dasha sign, with years in proportion (P.V.R. Narasimha Rao's book).
+    Gati names (Manduka, Markati, Simhavalokana) are not assigned; each dasha reports the sign jump from the previous one.
+
 ## Not included, on purpose
 
 Each of these has competing definitions or needs tables that couldn't be verified
 here. Shipping a plausible-looking wrong number would be worse for a downstream
 reader than leaving it out.
-- Narayana, Kalachakra, Sthira/Shoola/Brahma and the conditional nakshatra dashas (Shodasottari etc.)
+- Sthira/Shoola/Brahma and the conditional nakshatra dashas (Shodasottari etc.)
 - Bhava bala
 - Deeptadi avasthas, Pranapada, Varnada lagna
 - Kala, Mrityu, Ardhaprahara and Yamaghantaka
@@ -156,8 +174,11 @@ reader than leaving it out.
 12. The weekday did not exist; it now changes at sunrise.
 13. The library read birth data at import, so one process could build only one chart. Now everything is pure functions of the birth input.
 
-The old scripts (career-window scoring, the null test and the stability test) are kept
-unchanged in `research/legacy/`. They are prediction experiments, not part of the engine.
+The old prediction experiments were removed in the cleanup. Their conclusion still
+stands for anyone who uses this output to predict: a career-timing score built on
+the old engine put the real chart only at about the 94th percentile of 200 random
+charts (p ≈ 0.06, inflated by rule selection). Holding the chart fixed and toggling
+which classical rules were used spread the "best month" over about 25 of 72 months.
 
 ## License note
 
