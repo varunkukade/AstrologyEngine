@@ -1,11 +1,11 @@
 {
-  "y": 1990,
-  "mo": 1,
-  "d": 1,
-  "hh": 12,
-  "mm": 0,
-  "tz_offset": 5.5,
+  "name": "Example",
+  "date": "1990-01-01",
+  "time": "12:00:00",
+  "timezone": "Asia/Kolkata",
   "lat": 28.6139,
   "lon": 77.209,
+  "alt": 216,
+  "gender": "unspecified",
   "place": "New Delhi, India (example)"
 }
